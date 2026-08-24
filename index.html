@@ -8,10 +8,6 @@
     <!-- VK Bridge -->
     <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
     
-    <!-- React и ReactDOM -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    
     <style>
         * {
             margin: 0;
@@ -271,15 +267,6 @@
             transition: all 0.25s ease;
         }
         
-        .phone-button:active {
-            transform: scale(0.95);
-        }
-        
-        .phone-button:disabled {
-            background: #999;
-            cursor: not-allowed;
-        }
-        
         .error-message {
             background: #ffebee;
             color: #c62828;
@@ -308,36 +295,18 @@
     <div id="root"></div>
     
     <script>
-        console.log('Скрипт запущен');
-        console.log('React:', typeof React);
-        console.log('ReactDOM:', typeof ReactDOM);
-        
-        // Проверяем загрузку React
-        if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
-            document.getElementById('root').innerHTML = 
-                '<div style="text-align:center;padding:40px;font-family:Arial;">' +
-                '<h2>Ошибка загрузки React</h2>' +
-                '<p>Проверьте интернет-соединение</p>' +
-                '</div>';
-            throw new Error('React не загружен');
-        }
-        
-        const { useState, useEffect } = React;
-        
-        // ==================== НАСТРОЙКИ ОТПРАВКИ ЗАЯВОК ====================
-        // Замените на URL вашего Google Apps Script
-        const BACKEND_URL = 'https://script.google.com/macros/s/AKfycbxFn5lTy9aN1B6DNRg9eXG-DCQwkOibwgA9kAAnNvkXa9-BfORuX6wvp_l8d4aVqkJu/exec';
+        // ==================== НАСТРОЙКИ ====================
+        // ЗАМЕНИТЕ на URL вашего Google Apps Script
+        const BACKEND_URL = 'https://script.google.com/macros/s/ВАШ_ID/exec';
         
         // ==================== ФОТОГРАФИИ ====================
         const IMAGES = {
-            // Кухни
             kitchen: {
                 modern: 'https://images.unsplash.com/photo-1556912167-f556f1f39fdf?w=400&h=400&fit=crop',
                 classic: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&h=400&fit=crop',
                 loft: 'https://images.unsplash.com/photo-1556909212-d5b604d0c90d?w=400&h=400&fit=crop',
                 minimal: 'https://images.unsplash.com/photo-1600585152220-90363fe7e115?w=400&h=400&fit=crop',
             },
-            // Шкафы
             wardrobe: {
                 builtin: 'https://images.unsplash.com/photo-1595428774223-ef52624120d2?w=400&h=400&fit=crop',
                 standalone: 'https://images.unsplash.com/photo-1595428774204-7cf6e0b91b57?w=400&h=400&fit=crop',
@@ -346,593 +315,594 @@
             }
         };
         
-        // ==================== КОМПОНЕНТ ПРОГРЕСС-БАРА ====================
-        function ProgressBar({ currentStep, totalSteps }) {
-            const percentage = (currentStep / totalSteps) * 100;
+        // ==================== СОСТОЯНИЕ ПРИЛОЖЕНИЯ ====================
+        let currentStep = 'type';
+        let furnitureType = null;
+        let quizData = {
+            style: null,
+            material: null,
+            length: 3,
+            wardrobeType: null,
+            doorType: null,
+            width: 2,
+            priceMin: null,
+            priceMax: null,
+        };
+        let userName = '';
+        let userPhone = '';
+        
+        // ==================== ИНИЦИАЛИЗАЦИЯ ====================
+        function initApp() {
+            console.log('Приложение запущено (без React)');
             
-            return React.createElement('div', null,
-                React.createElement('div', { className: 'progress-bar' },
-                    React.createElement('div', { 
-                        className: 'progress-fill', 
-                        style: { width: percentage + '%' } 
-                    })
-                ),
-                React.createElement('div', { className: 'progress-text' },
-                    'Шаг ' + currentStep + ' из ' + totalSteps
-                )
-            );
+            // Инициализация VK Bridge
+            if (typeof vkBridge !== 'undefined') {
+                vkBridge.send('VKWebAppInit');
+                console.log('VK Bridge инициализирован');
+            }
+            
+            renderApp();
         }
         
-        // ==================== КОМПОНЕНТ КАРТОЧКИ С ФОТО ====================
-        function OptionCard({ image, title, description, selected, onClick, column }) {
-            const cardStyle = column ? 
-                { flexDirection: 'column', textAlign: 'center', padding: '16px' } : 
-                {};
+        // ==================== РЕНДЕРИНГ ====================
+        function renderApp() {
+            const root = document.getElementById('root');
             
-            const imageStyle = column ? 
-                { width: '100%', height: '150px', marginBottom: '12px' } : 
-                {};
-            
-            return React.createElement('div', {
-                className: 'option-card' + (selected ? ' selected' : ''),
-                onClick: onClick,
-                style: cardStyle
-            },
-                React.createElement('div', { 
-                    className: 'option-image',
-                    style: { ...imageStyle, backgroundImage: 'url("' + image + '")' }
-                }),
-                React.createElement('div', { 
-                    className: 'option-content',
-                    style: column ? { textAlign: 'center' } : {}
-                },
-                    React.createElement('div', { className: 'option-title' }, title),
-                    React.createElement('div', { className: 'option-description' }, description)
-                )
-            );
+            if (currentStep === 'type') {
+                renderTypeScreen(root);
+            } else if (currentStep === 'kitchen_style') {
+                renderKitchenStyleScreen(root);
+            } else if (currentStep === 'kitchen_material') {
+                renderKitchenMaterialScreen(root);
+            } else if (currentStep === 'kitchen_size') {
+                renderKitchenSizeScreen(root);
+            } else if (currentStep === 'wardrobe_type') {
+                renderWardrobeTypeScreen(root);
+            } else if (currentStep === 'wardrobe_door') {
+                renderWardrobeDoorScreen(root);
+            } else if (currentStep === 'wardrobe_width') {
+                renderWardrobeWidthScreen(root);
+            } else if (currentStep === 'result') {
+                renderResultScreen(root);
+            }
         }
         
-        // ==================== ГЛАВНЫЙ КОМПОНЕНТ ====================
-        function App() {
-            const [step, setStep] = useState('type');
-            const [furnitureType, setFurnitureType] = useState(null);
-            const [quizData, setQuizData] = useState({
-                style: null,
-                material: null,
-                length: 3,
-                wardrobeType: null,
-                doorType: null,
-                width: 2,
-                priceMin: null,
-                priceMax: null,
+        // ==================== ЭКРАН ВЫБОРА ТИПА ====================
+        function renderTypeScreen(root) {
+            root.innerHTML = `
+                <div class="app-container">
+                    <div class="quiz-header">
+                        <div class="quiz-title">Подбор мебели</div>
+                        <div class="quiz-subtitle">Что хотели бы рассчитать?</div>
+                    </div>
+                    
+                    <div class="options-grid two-col">
+                        <div class="option-card ${furnitureType === 'kitchen' ? 'selected' : ''}" onclick="selectFurnitureType('kitchen')" style="flex-direction: column; text-align: center; padding: 16px;">
+                            <div class="option-image" style="width: 100%; height: 150px; margin-bottom: 12px; background-image: url('${IMAGES.kitchen.modern}')"></div>
+                            <div class="option-content" style="text-align: center;">
+                                <div class="option-title">Кухню</div>
+                                <div class="option-description">Рассчитаем стоимость</div>
+                            </div>
+                        </div>
+                        
+                        <div class="option-card ${furnitureType === 'wardrobe' ? 'selected' : ''}" onclick="selectFurnitureType('wardrobe')" style="flex-direction: column; text-align: center; padding: 16px;">
+                            <div class="option-image" style="width: 100%; height: 150px; margin-bottom: 12px; background-image: url('${IMAGES.wardrobe.sliding}')"></div>
+                            <div class="option-content" style="text-align: center;">
+                                <div class="option-title">Шкаф</div>
+                                <div class="option-description">Подберем идеальный</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button class="button" ${!furnitureType ? 'disabled' : ''} onclick="goNext()">Продолжить</button>
+                </div>
+            `;
+        }
+        
+        // ==================== ЭКРАН СТИЛЯ КУХНИ ====================
+        function renderKitchenStyleScreen(root) {
+            const styles = [
+                { id: 'modern', title: 'Современный', description: 'Лаконичные формы, глянец', image: IMAGES.kitchen.modern },
+                { id: 'classic', title: 'Классический', description: 'Изящество и благородство', image: IMAGES.kitchen.classic },
+                { id: 'loft', title: 'Лофт', description: 'Индустриальный шик', image: IMAGES.kitchen.loft },
+                { id: 'minimal', title: 'Минимализм', description: 'Чистые линии', image: IMAGES.kitchen.minimal },
+            ];
+            
+            let optionsHTML = '';
+            styles.forEach(style => {
+                optionsHTML += `
+                    <div class="option-card ${quizData.style === style.id ? 'selected' : ''}" onclick="selectKitchenStyle('${style.id}')">
+                        <div class="option-image" style="background-image: url('${style.image}')"></div>
+                        <div class="option-content">
+                            <div class="option-title">${style.title}</div>
+                            <div class="option-description">${style.description}</div>
+                        </div>
+                    </div>
+                `;
             });
             
-            useEffect(() => {
-                console.log('Приложение запущено');
-                
-                if (typeof vkBridge !== 'undefined') {
-                    vkBridge.send('VKWebAppInit');
-                    console.log('VK Bridge инициализирован');
-                }
-            }, []);
-            
-            const goNext = () => {
-                const nextMap = {
-                    'type': () => furnitureType === 'kitchen' ? 'kitchen_style' : 'wardrobe_type',
-                    'kitchen_style': 'kitchen_material',
-                    'kitchen_material': 'kitchen_size',
-                    'kitchen_size': 'result',
-                    'wardrobe_type': 'wardrobe_door',
-                    'wardrobe_door': 'wardrobe_width',
-                    'wardrobe_width': 'result',
-                };
-                
-                const next = nextMap[step];
-                if (typeof next === 'function') {
-                    setStep(next());
-                } else if (next) {
-                    setStep(next);
-                }
-            };
-            
-            const goBack = () => {
-                const backMap = {
-                    'kitchen_style': 'type',
-                    'kitchen_material': 'kitchen_style',
-                    'kitchen_size': 'kitchen_material',
-                    'wardrobe_type': 'type',
-                    'wardrobe_door': 'wardrobe_type',
-                    'wardrobe_width': 'wardrobe_door',
-                    'result': furnitureType === 'kitchen' ? 'kitchen_size' : 'wardrobe_width',
-                };
-                setStep(backMap[step] || 'type');
-            };
-            
-            // ==================== ЭКРАН ВЫБОРА ТИПА ====================
-            if (step === 'type') {
-                return React.createElement('div', { className: 'app-container' },
-                    React.createElement('div', { className: 'quiz-header' },
-                        React.createElement('div', { className: 'quiz-title' }, 'Подбор мебели'),
-                        React.createElement('div', { className: 'quiz-subtitle' }, 'Что хотели бы рассчитать?')
-                    ),
+            root.innerHTML = `
+                <div class="app-container">
+                    <div class="quiz-header">
+                        <div class="quiz-title">Кухня: стиль</div>
+                        <div class="quiz-subtitle">Какой стиль вам ближе?</div>
+                    </div>
                     
-                    React.createElement('div', { className: 'options-grid two-col' },
-                        React.createElement(OptionCard, {
-                            image: IMAGES.kitchen.modern,
-                            title: 'Кухню',
-                            description: 'Рассчитаем стоимость',
-                            selected: furnitureType === 'kitchen',
-                            onClick: () => setFurnitureType('kitchen'),
-                            column: true
-                        }),
-                        React.createElement(OptionCard, {
-                            image: IMAGES.wardrobe.sliding,
-                            title: 'Шкаф',
-                            description: 'Подберем идеальный',
-                            selected: furnitureType === 'wardrobe',
-                            onClick: () => setFurnitureType('wardrobe'),
-                            column: true
-                        })
-                    ),
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 33%"></div>
+                    </div>
+                    <div class="progress-text">Шаг 1 из 3</div>
                     
-                    React.createElement('button', {
-                        className: 'button',
-                        disabled: !furnitureType,
-                        onClick: goNext
-                    }, 'Продолжить')
-                );
-            }
-            
-            // ==================== ЭКРАН СТИЛЯ КУХНИ ====================
-            if (step === 'kitchen_style') {
-                const styles = [
-                    { id: 'modern', title: 'Современный', description: 'Лаконичные формы, глянец', image: IMAGES.kitchen.modern },
-                    { id: 'classic', title: 'Классический', description: 'Изящество и благородство', image: IMAGES.kitchen.classic },
-                    { id: 'loft', title: 'Лофт', description: 'Индустриальный шик', image: IMAGES.kitchen.loft },
-                    { id: 'minimal', title: 'Минимализм', description: 'Чистые линии', image: IMAGES.kitchen.minimal },
-                ];
-                
-                return React.createElement('div', { className: 'app-container' },
-                    React.createElement('div', { className: 'quiz-header' },
-                        React.createElement('div', { className: 'quiz-title' }, 'Кухня: стиль'),
-                        React.createElement('div', { className: 'quiz-subtitle' }, 'Какой стиль вам ближе?')
-                    ),
+                    <div class="options-grid">
+                        ${optionsHTML}
+                    </div>
                     
-                    React.createElement(ProgressBar, { currentStep: 1, totalSteps: 3 }),
-                    
-                    React.createElement('div', { className: 'options-grid' },
-                        styles.map(style => 
-                            React.createElement(OptionCard, {
-                                key: style.id,
-                                image: style.image,
-                                title: style.title,
-                                description: style.description,
-                                selected: quizData.style === style.id,
-                                onClick: () => setQuizData({ ...quizData, style: style.id })
-                            })
-                        )
-                    ),
-                    
-                    React.createElement('div', { className: 'buttons-row' },
-                        React.createElement('button', { className: 'button button-secondary', onClick: goBack }, 'Назад'),
-                        React.createElement('button', { 
-                            className: 'button', 
-                            disabled: !quizData.style, 
-                            onClick: goNext 
-                        }, 'Далее')
-                    )
-                );
-            }
-            
-            // ==================== ЭКРАН МАТЕРИАЛА КУХНИ ====================
-            if (step === 'kitchen_material') {
-                const materials = [
-                    { id: 'plastic', title: 'Пластик', description: 'от 45 000 ₽/м', image: IMAGES.kitchen.modern },
-                    { id: 'enamel', title: 'Эмаль', description: 'от 65 000 ₽/м', image: IMAGES.kitchen.classic },
-                    { id: 'veneer', title: 'Шпон', description: 'от 85 000 ₽/м', image: IMAGES.kitchen.loft },
-                    { id: 'solid', title: 'Массив', description: 'от 120 000 ₽/м', image: IMAGES.kitchen.minimal },
-                ];
-                
-                return React.createElement('div', { className: 'app-container' },
-                    React.createElement('div', { className: 'quiz-header' },
-                        React.createElement('div', { className: 'quiz-title' }, 'Кухня: материал'),
-                        React.createElement('div', { className: 'quiz-subtitle' }, 'Выберите материал фасада')
-                    ),
-                    
-                    React.createElement(ProgressBar, { currentStep: 2, totalSteps: 3 }),
-                    
-                    React.createElement('div', { className: 'options-grid' },
-                        materials.map(material => 
-                            React.createElement(OptionCard, {
-                                key: material.id,
-                                image: material.image,
-                                title: material.title,
-                                description: material.description,
-                                selected: quizData.material === material.id,
-                                onClick: () => setQuizData({ ...quizData, material: material.id })
-                            })
-                        )
-                    ),
-                    
-                    React.createElement('div', { className: 'buttons-row' },
-                        React.createElement('button', { className: 'button button-secondary', onClick: goBack }, 'Назад'),
-                        React.createElement('button', { 
-                            className: 'button', 
-                            disabled: !quizData.material, 
-                            onClick: goNext 
-                        }, 'Далее')
-                    )
-                );
-            }
-            
-            // ==================== ЭКРАН РАЗМЕРА КУХНИ ====================
-            if (step === 'kitchen_size') {
-                const estimatedPrice = Math.round(quizData.length * 45000);
-                
-                return React.createElement('div', { className: 'app-container' },
-                    React.createElement('div', { className: 'quiz-header' },
-                        React.createElement('div', { className: 'quiz-title' }, 'Кухня: размер'),
-                        React.createElement('div', { className: 'quiz-subtitle' }, 'Какой длины кухня?')
-                    ),
-                    
-                    React.createElement(ProgressBar, { currentStep: 3, totalSteps: 3 }),
-                    
-                    React.createElement('div', { className: 'price-display' },
-                        React.createElement('div', { style: { fontSize: '44px', fontWeight: 'bold' } },
-                            quizData.length.toFixed(1) + ' м'
-                        ),
-                        React.createElement('div', { style: { color: '#666', marginTop: '8px' } },
-                            'Примерная стоимость: ' + estimatedPrice.toLocaleString() + ' ₽'
-                        )
-                    ),
-                    
-                    React.createElement('div', { className: 'slider-container' },
-                        React.createElement('input', {
-                            type: 'range',
-                            className: 'slider',
-                            min: '1',
-                            max: '10',
-                            step: '0.5',
-                            value: quizData.length,
-                            onChange: (e) => setQuizData({ ...quizData, length: parseFloat(e.target.value) })
-                        }),
-                        React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', marginTop: '8px' } },
-                            React.createElement('span', { style: { fontSize: '13px', color: '#666' } }, '1 м'),
-                            React.createElement('span', { style: { fontSize: '13px', color: '#666' } }, '10 м')
-                        )
-                    ),
-                    
-                    React.createElement('div', { className: 'buttons-row' },
-                        React.createElement('button', { className: 'button button-secondary', onClick: goBack }, 'Назад'),
-                        React.createElement('button', { className: 'button', onClick: goNext }, 'Рассчитать')
-                    )
-                );
-            }
-            
-            // ==================== ЭКРАН ТИПА ШКАФА ====================
-            if (step === 'wardrobe_type') {
-                const types = [
-                    { id: 'built-in', title: 'Встроенный', description: 'Экономит пространство', image: IMAGES.wardrobe.builtin },
-                    { id: 'standalone', title: 'Отдельно стоящий', description: 'Можно перемещать', image: IMAGES.wardrobe.standalone },
-                ];
-                
-                return React.createElement('div', { className: 'app-container' },
-                    React.createElement('div', { className: 'quiz-header' },
-                        React.createElement('div', { className: 'quiz-title' }, 'Шкаф: тип'),
-                        React.createElement('div', { className: 'quiz-subtitle' }, 'Какой шкаф вам нужен?')
-                    ),
-                    
-                    React.createElement(ProgressBar, { currentStep: 1, totalSteps: 3 }),
-                    
-                    React.createElement('div', { className: 'options-grid' },
-                        types.map(type => 
-                            React.createElement(OptionCard, {
-                                key: type.id,
-                                image: type.image,
-                                title: type.title,
-                                description: type.description,
-                                selected: quizData.wardrobeType === type.id,
-                                onClick: () => setQuizData({ ...quizData, wardrobeType: type.id })
-                            })
-                        )
-                    ),
-                    
-                    React.createElement('div', { className: 'buttons-row' },
-                        React.createElement('button', { className: 'button button-secondary', onClick: goBack }, 'Назад'),
-                        React.createElement('button', { 
-                            className: 'button', 
-                            disabled: !quizData.wardrobeType, 
-                            onClick: goNext 
-                        }, 'Далее')
-                    )
-                );
-            }
-            
-            // ==================== ЭКРАН ДВЕРЕЙ ШКАФА ====================
-            if (step === 'wardrobe_door') {
-                const doors = [
-                    { id: 'sliding', title: 'Шкаф-купе', description: 'Раздвижные двери', image: IMAGES.wardrobe.sliding },
-                    { id: 'hinged', title: 'Распашные', description: 'Классические двери', image: IMAGES.wardrobe.hinged },
-                ];
-                
-                return React.createElement('div', { className: 'app-container' },
-                    React.createElement('div', { className: 'quiz-header' },
-                        React.createElement('div', { className: 'quiz-title' }, 'Шкаф: двери'),
-                        React.createElement('div', { className: 'quiz-subtitle' }, 'Какие двери предпочитаете?')
-                    ),
-                    
-                    React.createElement(ProgressBar, { currentStep: 2, totalSteps: 3 }),
-                    
-                    React.createElement('div', { className: 'options-grid' },
-                        doors.map(door => 
-                            React.createElement(OptionCard, {
-                                key: door.id,
-                                image: door.image,
-                                title: door.title,
-                                description: door.description,
-                                selected: quizData.doorType === door.id,
-                                onClick: () => setQuizData({ ...quizData, doorType: door.id })
-                            })
-                        )
-                    ),
-                    
-                    React.createElement('div', { className: 'buttons-row' },
-                        React.createElement('button', { className: 'button button-secondary', onClick: goBack }, 'Назад'),
-                        React.createElement('button', { 
-                            className: 'button', 
-                            disabled: !quizData.doorType, 
-                            onClick: goNext 
-                        }, 'Далее')
-                    )
-                );
-            }
-            
-            // ==================== ЭКРАН ШИРИНЫ ШКАФА ====================
-            if (step === 'wardrobe_width') {
-                const estimatedPrice = Math.round(quizData.width * 35000);
-                
-                return React.createElement('div', { className: 'app-container' },
-                    React.createElement('div', { className: 'quiz-header' },
-                        React.createElement('div', { className: 'quiz-title' }, 'Шкаф: ширина'),
-                        React.createElement('div', { className: 'quiz-subtitle' }, 'Укажите примерную ширину')
-                    ),
-                    
-                    React.createElement(ProgressBar, { currentStep: 3, totalSteps: 3 }),
-                    
-                    React.createElement('div', { className: 'price-display' },
-                        React.createElement('div', { style: { fontSize: '44px', fontWeight: 'bold' } },
-                            quizData.width.toFixed(1) + ' м'
-                        ),
-                        React.createElement('div', { style: { color: '#666', marginTop: '8px' } },
-                            'Примерная стоимость: ' + estimatedPrice.toLocaleString() + ' ₽'
-                        )
-                    ),
-                    
-                    React.createElement('div', { className: 'slider-container' },
-                        React.createElement('input', {
-                            type: 'range',
-                            className: 'slider',
-                            min: '0.5',
-                            max: '6',
-                            step: '0.1',
-                            value: quizData.width,
-                            onChange: (e) => setQuizData({ ...quizData, width: parseFloat(e.target.value) })
-                        }),
-                        React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', marginTop: '8px' } },
-                            React.createElement('span', { style: { fontSize: '13px', color: '#666' } }, '0.5 м'),
-                            React.createElement('span', { style: { fontSize: '13px', color: '#666' } }, '6 м')
-                        )
-                    ),
-                    
-                    React.createElement('div', { className: 'buttons-row' },
-                        React.createElement('button', { className: 'button button-secondary', onClick: goBack }, 'Назад'),
-                        React.createElement('button', { className: 'button', onClick: goNext }, 'Рассчитать')
-                    )
-                );
-            }
-            
-            // ==================== ЭКРАН РЕЗУЛЬТАТА ====================
-            if (step === 'result') {
-                return React.createElement(ResultScreen, { 
-                    furnitureType, 
-                    quizData, 
-                    setQuizData,
-                    goBack 
-                });
-            }
-            
-            return null;
+                    <div class="buttons-row">
+                        <button class="button button-secondary" onclick="goBack()">Назад</button>
+                        <button class="button" ${!quizData.style ? 'disabled' : ''} onclick="goNext()">Далее</button>
+                    </div>
+                </div>
+            `;
         }
         
-        // ==================== КОМПОНЕНТ РЕЗУЛЬТАТА ====================
-        function ResultScreen({ furnitureType, quizData, setQuizData, goBack }) {
-            const [loading, setLoading] = useState(true);
-            const [showForm, setShowForm] = useState(false);
-            const [name, setName] = useState('');
-            const [phone, setPhone] = useState('');
-            const [submitted, setSubmitted] = useState(false);
-            const [phoneLoading, setPhoneLoading] = useState(false);
-            const [sending, setSending] = useState(false);
-            const [error, setError] = useState('');
+        // ==================== ЭКРАН МАТЕРИАЛА КУХНИ ====================
+        function renderKitchenMaterialScreen(root) {
+            const materials = [
+                { id: 'plastic', title: 'Пластик', description: 'от 45 000 ₽/м', image: IMAGES.kitchen.modern },
+                { id: 'enamel', title: 'Эмаль', description: 'от 65 000 ₽/м', image: IMAGES.kitchen.classic },
+                { id: 'veneer', title: 'Шпон', description: 'от 85 000 ₽/м', image: IMAGES.kitchen.loft },
+                { id: 'solid', title: 'Массив', description: 'от 120 000 ₽/м', image: IMAGES.kitchen.minimal },
+            ];
             
-            useEffect(() => {
-                console.log('Расчет цены...');
-                
-                // Получаем данные пользователя VK
-                if (typeof vkBridge !== 'undefined') {
-                    vkBridge.send('VKWebAppGetUserInfo')
-                        .then(user => {
-                            setName(user.first_name + ' ' + user.last_name);
-                        })
-                        .catch(err => console.log('Не удалось получить данные:', err));
-                }
-                
-                // Рассчитываем цену
-                setTimeout(() => {
-                    let priceMin, priceMax;
-                    
-                    if (furnitureType === 'kitchen') {
-                        const styleMultiplier = { modern: 1, classic: 1.2, loft: 1.1, minimal: 0.9 };
-                        const materialMultiplier = { plastic: 1, enamel: 1.3, veneer: 1.5, solid: 2.0 };
-                        const multiplier = styleMultiplier[quizData.style] * materialMultiplier[quizData.material];
-                        priceMin = Math.round(45000 * quizData.length * multiplier * 0.9);
-                        priceMax = Math.round(45000 * quizData.length * multiplier * 1.15);
-                    } else {
-                        const typeMultiplier = { 'built-in': 1.1, 'standalone': 1 };
-                        const doorMultiplier = { 'sliding': 1.15, 'hinged': 1 };
-                        const multiplier = typeMultiplier[quizData.wardrobeType] * doorMultiplier[quizData.doorType];
-                        priceMin = Math.round(35000 * quizData.width * multiplier * 0.9);
-                        priceMax = Math.round(35000 * quizData.width * multiplier * 1.15);
-                    }
-                    
-                    setQuizData({ ...quizData, priceMin, priceMax });
-                    setLoading(false);
-                }, 800);
-            }, []);
+            let optionsHTML = '';
+            materials.forEach(material => {
+                optionsHTML += `
+                    <div class="option-card ${quizData.material === material.id ? 'selected' : ''}" onclick="selectKitchenMaterial('${material.id}')">
+                        <div class="option-image" style="background-image: url('${material.image}')"></div>
+                        <div class="option-content">
+                            <div class="option-title">${material.title}</div>
+                            <div class="option-description">${material.description}</div>
+                        </div>
+                    </div>
+                `;
+            });
             
-            const handleGetPhone = async () => {
-                if (typeof vkBridge === 'undefined') {
-                    alert('Функция доступна только в приложении VK');
-                    return;
-                }
-                
-                setPhoneLoading(true);
-                
-                try {
-                    const phoneData = await vkBridge.send('VKWebAppGetPhoneNumber');
+            root.innerHTML = `
+                <div class="app-container">
+                    <div class="quiz-header">
+                        <div class="quiz-title">Кухня: материал</div>
+                        <div class="quiz-subtitle">Выберите материал фасада</div>
+                    </div>
                     
-                    if (phoneData && phoneData.phone) {
-                        setPhone(phoneData.phone);
-                        console.log('Номер получен:', phoneData.phone);
-                    } else {
-                        alert('Не удалось получить номер. Введите вручную.');
-                    }
-                } catch (error) {
-                    console.error('Ошибка получения номера:', error);
-                    alert('Для получения номера нужно разрешить доступ в настройках VK');
-                } finally {
-                    setPhoneLoading(false);
-                }
-            };
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 66%"></div>
+                    </div>
+                    <div class="progress-text">Шаг 2 из 3</div>
+                    
+                    <div class="options-grid">
+                        ${optionsHTML}
+                    </div>
+                    
+                    <div class="buttons-row">
+                        <button class="button button-secondary" onclick="goBack()">Назад</button>
+                        <button class="button" ${!quizData.material ? 'disabled' : ''} onclick="goNext()">Далее</button>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // ==================== ЭКРАН РАЗМЕРА КУХНИ ====================
+        function renderKitchenSizeScreen(root) {
+            const estimatedPrice = Math.round(quizData.length * 45000);
             
-            const handleSubmit = async () => {
-                // Валидация
-                if (!name.trim()) {
-                    setError('Пожалуйста, укажите ваше имя');
-                    return;
-                }
-                
-                if (!phone.trim()) {
-                    setError('Пожалуйста, укажите номер телефона');
-                    return;
-                }
-                
-                setError('');
-                setSending(true);
-                
-                try {
-                    console.log('Отправка заявки на сервер...');
+            root.innerHTML = `
+                <div class="app-container">
+                    <div class="quiz-header">
+                        <div class="quiz-title">Кухня: размер</div>
+                        <div class="quiz-subtitle">Какой длины кухня?</div>
+                    </div>
                     
-                    // Формируем данные для отправки
-                    const leadData = {
-                        name: name,
-                        phone: phone,
-                        furnitureType: furnitureType,
-                        quiz: quizData,
-                        user: null,
-                    };
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 100%"></div>
+                    </div>
+                    <div class="progress-text">Шаг 3 из 3</div>
                     
-                    // Отправляем на Google Apps Script
-                    const response = await fetch(BACKEND_URL, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(leadData),
-                    });
+                    <div class="price-display">
+                        <div style="font-size: 44px; font-weight: bold;">${quizData.length.toFixed(1)} м</div>
+                        <div style="color: #666; margin-top: 8px;">Примерная стоимость: ${estimatedPrice.toLocaleString()} ₽</div>
+                    </div>
                     
-                    const result = await response.json();
+                    <div class="slider-container">
+                        <input type="range" class="slider" min="1" max="10" step="0.5" value="${quizData.length}" oninput="updateKitchenLength(this.value)">
+                        <div style="display: flex; justify-content: space-between; margin-top: 8px;">
+                            <span style="font-size: 13px; color: #666;">1 м</span>
+                            <span style="font-size: 13px; color: #666;">10 м</span>
+                        </div>
+                    </div>
                     
-                    console.log('Ответ сервера:', result);
-                    
-                    if (result.success) {
-                        // Отправляем событие в VK Ads
-                        if (typeof vkBridge !== 'undefined') {
-                            await vkBridge.send('VKWebAppTrackEvent', {
-                                event_name: 'lead_success',
-                                event_data: {
-                                    furniture_type: furnitureType,
-                                    price: quizData.priceMin,
-                                },
-                            });
-                        }
-                        
-                        setSubmitted(true);
-                    } else {
-                        setError('Ошибка отправки: ' + (result.error || 'неизвестная ошибка'));
-                    }
-                } catch (error) {
-                    console.error('Ошибка отправки:', error);
-                    setError('Не удалось отправить заявку. Проверьте интернет-соединение и попробуйте снова.');
-                } finally {
-                    setSending(false);
-                }
-            };
+                    <div class="buttons-row">
+                        <button class="button button-secondary" onclick="goBack()">Назад</button>
+                        <button class="button" onclick="goNext()">Рассчитать</button>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // ==================== ЭКРАН ТИПА ШКАФА ====================
+        function renderWardrobeTypeScreen(root) {
+            const types = [
+                { id: 'built-in', title: 'Встроенный', description: 'Экономит пространство', image: IMAGES.wardrobe.builtin },
+                { id: 'standalone', title: 'Отдельно стоящий', description: 'Можно перемещать', image: IMAGES.wardrobe.standalone },
+            ];
             
-            if (loading) {
-                return React.createElement('div', { className: 'app-container' },
-                    React.createElement('div', { className: 'loading' },
-                        React.createElement('div', { className: 'spinner' }),
-                        React.createElement('div', null, 'Считаем стоимость...')
-                    )
-                );
+            let optionsHTML = '';
+            types.forEach(type => {
+                optionsHTML += `
+                    <div class="option-card ${quizData.wardrobeType === type.id ? 'selected' : ''}" onclick="selectWardrobeType('${type.id}')">
+                        <div class="option-image" style="background-image: url('${type.image}')"></div>
+                        <div class="option-content">
+                            <div class="option-title">${type.title}</div>
+                            <div class="option-description">${type.description}</div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            root.innerHTML = `
+                <div class="app-container">
+                    <div class="quiz-header">
+                        <div class="quiz-title">Шкаф: тип</div>
+                        <div class="quiz-subtitle">Какой шкаф вам нужен?</div>
+                    </div>
+                    
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 33%"></div>
+                    </div>
+                    <div class="progress-text">Шаг 1 из 3</div>
+                    
+                    <div class="options-grid">
+                        ${optionsHTML}
+                    </div>
+                    
+                    <div class="buttons-row">
+                        <button class="button button-secondary" onclick="goBack()">Назад</button>
+                        <button class="button" ${!quizData.wardrobeType ? 'disabled' : ''} onclick="goNext()">Далее</button>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // ==================== ЭКРАН ДВЕРЕЙ ШКАФА ====================
+        function renderWardrobeDoorScreen(root) {
+            const doors = [
+                { id: 'sliding', title: 'Шкаф-купе', description: 'Раздвижные двери', image: IMAGES.wardrobe.sliding },
+                { id: 'hinged', title: 'Распашные', description: 'Классические двери', image: IMAGES.wardrobe.hinged },
+            ];
+            
+            let optionsHTML = '';
+            doors.forEach(door => {
+                optionsHTML += `
+                    <div class="option-card ${quizData.doorType === door.id ? 'selected' : ''}" onclick="selectWardrobeDoor('${door.id}')">
+                        <div class="option-image" style="background-image: url('${door.image}')"></div>
+                        <div class="option-content">
+                            <div class="option-title">${door.title}</div>
+                            <div class="option-description">${door.description}</div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            root.innerHTML = `
+                <div class="app-container">
+                    <div class="quiz-header">
+                        <div class="quiz-title">Шкаф: двери</div>
+                        <div class="quiz-subtitle">Какие двери предпочитаете?</div>
+                    </div>
+                    
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 66%"></div>
+                    </div>
+                    <div class="progress-text">Шаг 2 из 3</div>
+                    
+                    <div class="options-grid">
+                        ${optionsHTML}
+                    </div>
+                    
+                    <div class="buttons-row">
+                        <button class="button button-secondary" onclick="goBack()">Назад</button>
+                        <button class="button" ${!quizData.doorType ? 'disabled' : ''} onclick="goNext()">Далее</button>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // ==================== ЭКРАН ШИРИНЫ ШКАФА ====================
+        function renderWardrobeWidthScreen(root) {
+            const estimatedPrice = Math.round(quizData.width * 35000);
+            
+            root.innerHTML = `
+                <div class="app-container">
+                    <div class="quiz-header">
+                        <div class="quiz-title">Шкаф: ширина</div>
+                        <div class="quiz-subtitle">Укажите примерную ширину</div>
+                    </div>
+                    
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 100%"></div>
+                    </div>
+                    <div class="progress-text">Шаг 3 из 3</div>
+                    
+                    <div class="price-display">
+                        <div style="font-size: 44px; font-weight: bold;">${quizData.width.toFixed(1)} м</div>
+                        <div style="color: #666; margin-top: 8px;">Примерная стоимость: ${estimatedPrice.toLocaleString()} ₽</div>
+                    </div>
+                    
+                    <div class="slider-container">
+                        <input type="range" class="slider" min="0.5" max="6" step="0.1" value="${quizData.width}" oninput="updateWardrobeWidth(this.value)">
+                        <div style="display: flex; justify-content: space-between; margin-top: 8px;">
+                            <span style="font-size: 13px; color: #666;">0.5 м</span>
+                            <span style="font-size: 13px; color: #666;">6 м</span>
+                        </div>
+                    </div>
+                    
+                    <div class="buttons-row">
+                        <button class="button button-secondary" onclick="goBack()">Назад</button>
+                        <button class="button" onclick="goNext()">Рассчитать</button>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // ==================== ЭКРАН РЕЗУЛЬТАТА ====================
+        function renderResultScreen(root) {
+            // Рассчитываем цену
+            let priceMin, priceMax;
+            
+            if (furnitureType === 'kitchen') {
+                const styleMultiplier = { modern: 1, classic: 1.2, loft: 1.1, minimal: 0.9 };
+                const materialMultiplier = { plastic: 1, enamel: 1.3, veneer: 1.5, solid: 2.0 };
+                const multiplier = styleMultiplier[quizData.style] * materialMultiplier[quizData.material];
+                priceMin = Math.round(45000 * quizData.length * multiplier * 0.9);
+                priceMax = Math.round(45000 * quizData.length * multiplier * 1.15);
+            } else {
+                const typeMultiplier = { 'built-in': 1.1, 'standalone': 1 };
+                const doorMultiplier = { 'sliding': 1.15, 'hinged': 1 };
+                const multiplier = typeMultiplier[quizData.wardrobeType] * doorMultiplier[quizData.doorType];
+                priceMin = Math.round(35000 * quizData.width * multiplier * 0.9);
+                priceMax = Math.round(35000 * quizData.width * multiplier * 1.15);
             }
             
-            if (submitted) {
-                return React.createElement('div', { className: 'app-container' },
-                    React.createElement('div', { className: 'quiz-header' },
-                        React.createElement('div', { className: 'quiz-title' }, 'Спасибо!'),
-                        React.createElement('div', { className: 'quiz-subtitle' }, 'Заявка отправлена')
-                    ),
-                    
-                    React.createElement('div', { className: 'price-display' },
-                        React.createElement('div', { style: { fontSize: '64px' } }, '✅'),
-                        React.createElement('div', { style: { marginTop: '16px', fontSize: '18px', fontWeight: '600' } },
-                            'Менеджер свяжется с вами в течение 15 минут'
-                        )
-                    ),
-                    
-                    React.createElement('button', { 
-                        className: 'button',
-                        onClick: () => {
-                            if (typeof vkBridge !== 'undefined') {
-                                vkBridge.send('VKWebAppClose', { status: 'success' });
-                            }
-                        }
-                    }, 'Закрыть')
-                );
+            quizData.priceMin = priceMin;
+            quizData.priceMax = priceMax;
+            
+            // Получаем данные пользователя
+            if (typeof vkBridge !== 'undefined') {
+                vkBridge.send('VKWebAppGetUserInfo')
+                    .then(user => {
+                        userName = user.first_name + ' ' + user.last_name;
+                        const nameInput = document.getElementById('userName');
+                        if (nameInput) nameInput.value = userName;
+                    })
+                    .catch(err => console.log('Не удалось получить данные:', err));
             }
             
-            return React.createElement('div', { className: 'app-container' },
-                React.createElement('div', { className: 'quiz-header' },
-                    React.createElement('div', { className: 'quiz-title' },
-                        furnitureType === 'kitchen' ? 'Расчет кухни' : 'Расчет шкафа'
-                    )
-                ),
+            const title = furnitureType === 'kitchen' ? 'Расчет кухни' : 'Расчет шкафа';
+            
+            root.innerHTML = `
+                <div class="app-container">
+                    <div class="quiz-header">
+                        <div class="quiz-title">${title}</div>
+                    </div>
+                    
+                    <div class="price-display">
+                        <div style="color: #666; font-size: 14px;">Примерная стоимость:</div>
+                        <div class="price-value">${priceMin.toLocaleString()} - ${priceMax.toLocaleString()} ₽</div>
+                    </div>
+                    
+                    <button class="button" onclick="showForm()">Получить точный расчет + Дизайн-проект бесплатно</button>
+                    
+                    <button class="button button-back" style="margin-top: 12px;" onclick="goBack()">Изменить параметры</button>
+                </div>
+            `;
+        }
+        
+        // ==================== ПОКАЗАТЬ ФОРМУ ====================
+        function showForm() {
+            const root = document.getElementById('root');
+            
+            root.innerHTML = `
+                <div class="app-container">
+                    <div class="quiz-header">
+                        <div class="quiz-title">Оставить заявку</div>
+                    </div>
+                    
+                    <div class="price-display">
+                        <div style="color: #666; font-size: 14px;">Примерная стоимость:</div>
+                        <div class="price-value">${quizData.priceMin.toLocaleString()} - ${quizData.priceMax.toLocaleString()} ₽</div>
+                    </div>
+                    
+                    <div id="errorBlock"></div>
+                    
+                    <input class="input-field" type="text" id="userName" placeholder="Ваше имя" value="${userName}">
+                    
+                    <div style="display: flex; gap: 8px;">
+                        <input class="input-field" type="tel" id="userPhone" placeholder="+7 (___) ___-__-__" style="flex: 1;">
+                        <button class="phone-button" onclick="getPhoneFromVK()">Из VK</button>
+                    </div>
+                    
+                    <button class="button" onclick="submitLead()">Отправить заявку</button>
+                </div>
+            `;
+        }
+        
+        // ==================== ПОЛУЧЕНИЕ НОМЕРА ИЗ VK ====================
+        async function getPhoneFromVK() {
+            if (typeof vkBridge === 'undefined') {
+                alert('Функция доступна только в приложении VK');
+                return;
+            }
+            
+            try {
+                const phoneData = await vkBridge.send('VKWebAppGetPhoneNumber');
                 
-                React.createElement('div', { className: 'price-display' },
-                    React.createElement('div', { style: { color: '#666', fontSize: '14px' } },
-                        'Примерная стоимость:'
-                    ),
-                    React.createElement('div', { className: 'price-value' },
-                        quizData.priceMin?.toLocaleString() + ' - ' + quizData.priceMax?.toLocaleString() + ' ₽'
-                    )
-                ),
+                if (phoneData && phoneData.phone) {
+                    document.getElementById('userPhone').value = phoneData.phone;
+                    console.log('Номер получен:', phoneData.phone);
+                }
+            } catch (error) {
+                console.error('Ошибка получения номера:', error);
+                alert('Для получения номера нужно разрешить доступ в настройках VK');
+            }
+        }
+        
+        // ==================== ОТПРАВКА ЗАЯВКИ ====================
+        async function submitLead() {
+            const name = document.getElementById('userName').value.trim();
+            const phone = document.getElementById('userPhone').value.trim();
+            const errorBlock = document.getElementById('errorBlock');
+            
+            // Валидация
+            if (!name) {
+                errorBlock.innerHTML = '<div class="error-message">Укажите ваше имя</div>';
+                return;
+            }
+            
+            if (!phone) {
+                errorBlock.innerHTML = '<div class="error-message">Укажите номер телефона</div>';
+                return;
+            }
+            
+            errorBlock.innerHTML = '';
+            
+            try {
+                console.log('Отправка заявки...');
                 
-                !showForm ? 
-                    React.createElement('button', { 
-                        className: 'button',
-                        onClick: () => setShowForm(true)
-                    }, 'Получить точный расчет + Дизайн-проект бесплатно') :
-                    React.createElement('div', null,
-                        error && React.createElement('div', { className: 'error-message' },
+                const leadData = {
+                    name: name,
+                    phone: phone,
+                    furnitureType: furnitureType,
+                    quiz: quizData,
+                };
+                
+                const response = await fetch(BACKEND_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(leadData),
+                });
+                
+                const result = await response.json();
+                console.log('Ответ сервера:', result);
+                
+                if (result.success) {
+                    // Отправляем событие в VK Ads
+                    if (typeof vkBridge !== 'undefined') {
+                        await vkBridge.send('VKWebAppTrackEvent', {
+                            event_name: 'lead_success',
+                            event_data: {
+                                furniture_type: furnitureType,
+                                price: quizData.priceMin,
+                            },
+                        });
+                    }
+                    
+                    // Показываем экран успеха
+                    const root = document.getElementById('root');
+                    root.innerHTML = `
+                        <div class="app-container">
+                            <div class="quiz-header">
+                                <div class="quiz-title">Спасибо!</div>
+                                <div class="quiz-subtitle">Заявка отправлена</div>
+                            </div>
+                            
+                            <div class="price-display">
+                                <div style="font-size: 64px;">✅</div>
+                                <div style="margin-top: 16px; font-size: 18px; font-weight: 600;">
+                                    Менеджер свяжется с вами в течение 15 минут
+                                </div>
+                            </div>
+                            
+                            <button class="button" onclick="closeApp()">Закрыть</button>
+                        </div>
+                    `;
+                } else {
+                    errorBlock.innerHTML = '<div class="error-message">Ошибка: ' + (result.error || 'неизвестная ошибка') + '</div>';
+                }
+            } catch (error) {
+                console.error('Ошибка отправки:', error);
+                errorBlock.innerHTML = '<div class="error-message">Не удалось отправить заявку. Проверьте соединение.</div>';
+            }
+        }
+        
+        // ==================== ЗАКРЫТИЕ ПРИЛОЖЕНИЯ ====================
+        function closeApp() {
+            if (typeof vkBridge !== 'undefined') {
+                vkBridge.send('VKWebAppClose', { status: 'success' });
+            }
+        }
+        
+        // ==================== НАВИГАЦИЯ ====================
+        function selectFurnitureType(type) {
+            furnitureType = type;
+            renderApp();
+        }
+        
+        function selectKitchenStyle(style) {
+            quizData.style = style;
+            renderApp();
+        }
+        
+        function selectKitchenMaterial(material) {
+            quizData.material = material;
+            renderApp();
+        }
+        
+        function selectWardrobeType(type) {
+            quizData.wardrobeType = type;
+            renderApp();
+        }
+        
+        function selectWardrobeDoor(door) {
+            quizData.doorType = door;
+            renderApp();
+        }
+        
+        function updateKitchenLength(value) {
+            quizData.length = parseFloat(value);
+            renderKitchenSizeScreen(document.getElementById('root'));
+        }
+        
+        function updateWardrobeWidth(value) {
+            quizData.width = parseFloat(value);
+            renderWardrobeWidthScreen(document.getElementById('root'));
+        }
+        
+        function goNext() {
+            const nextMap = {
+                'type': () => furnitureType === 'kitchen' ? 'kitchen_style' : 'wardrobe_type',
+                'kitchen_style': 'kitchen_material',
+                'kitchen_material': 'kitchen_size',
+                'kitchen_size': 'result',
+                'wardrobe_type': 'wardrobe_door',
+                'wardrobe_door': 'wardrobe_width',
+                'wardrobe_width': 'result',
+            };
+            
+            const next = nextMap[currentStep];
+            if (typeof next === 'function') {
+                currentStep = next();
+            } else if (next) {
+                currentStep = next;
+            }
+            
+            renderApp();
+        }
+        
+        function goBack() {
+            const backMap = {
+                'kitchen_style': 'type',
+                'kitchen_material': 'kitchen_style',
+                'kitchen_size': 'kitchen_material',
+                'wardrobe_type': 'type',
+                'ward
